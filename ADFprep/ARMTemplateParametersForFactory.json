@@ -4,12 +4,6 @@
 	"parameters": {
 		"factoryName": {
 			"value": "ADFprep"
-		},
-		"SqlServervirtualmachine1_connectionString": {
-			"value": ""
-		},
-		"linkedservise_arifa_connectionString": {
-			"value": ""
 		}
 	}
 }
