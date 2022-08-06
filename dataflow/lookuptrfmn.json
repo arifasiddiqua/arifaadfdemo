@@ -1,0 +1,79 @@
+{
+	"name": "lookuptrfmn",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "empdata",
+						"type": "DatasetReference"
+					},
+					"name": "emp"
+				},
+				{
+					"dataset": {
+						"referenceName": "deptdata",
+						"type": "DatasetReference"
+					},
+					"name": "deptddata"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "outputdataset1",
+						"type": "DatasetReference"
+					},
+					"name": "lookupoutput",
+					"rejectedDataLinkedService": {
+						"referenceName": "linkedservise_arifa",
+						"type": "LinkedServiceReference"
+					}
+				}
+			],
+			"transformations": [
+				{
+					"name": "lookuptransform"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          eid as string,",
+				"          name as string,",
+				"          gender as string,",
+				"          deptid as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     partitionBy('hash', 1)) ~> emp",
+				"source(output(",
+				"          depid as string,",
+				"          deptname as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     partitionBy('hash', 1)) ~> deptddata",
+				"emp, deptddata lookup(deptid == depid,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     partitionBy('hash', 1),",
+				"     broadcast: 'auto')~> lookuptransform",
+				"lookuptransform sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Name as string,",
+				"          Category as string,",
+				"          Status as string,",
+				"          Error as string",
+				"     ),",
+				"     partitionFileNames:['outputoflookup'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> lookupoutput"
+			]
+		}
+	}
+}

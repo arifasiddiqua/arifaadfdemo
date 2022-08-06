@@ -1,0 +1,68 @@
+{
+	"name": "unpivot",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "sampleForUnpivot",
+						"type": "DatasetReference"
+					},
+					"name": "sampledata"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "outputdataset1",
+						"type": "DatasetReference"
+					},
+					"name": "unpivot",
+					"rejectedDataLinkedService": {
+						"referenceName": "linkedservise_arifa",
+						"type": "LinkedServiceReference"
+					}
+				}
+			],
+			"transformations": [
+				{
+					"name": "unpivot1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          po as string,",
+				"          name as string,",
+				"          apple as string,",
+				"          mango as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     partitionBy('hash', 1)) ~> sampledata",
+				"sampledata unpivot(output(",
+				"          fruits as string,",
+				"          amount as string",
+				"     ),",
+				"     ungroupBy(po,",
+				"          name),",
+				"     lateral: true,",
+				"     ignoreNullPivots: false,",
+				"     partitionBy('hash', 1)) ~> unpivot1",
+				"unpivot1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Name as string,",
+				"          Category as string,",
+				"          Status as string,",
+				"          Error as string",
+				"     ),",
+				"     partitionFileNames:['unpivot.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> unpivot"
+			]
+		}
+	}
+}

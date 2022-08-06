@@ -1,0 +1,77 @@
+{
+	"name": "OPNOTEXIST",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "empdata",
+						"type": "DatasetReference"
+					},
+					"name": "empdat"
+				},
+				{
+					"dataset": {
+						"referenceName": "deptdata",
+						"type": "DatasetReference"
+					},
+					"name": "det"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "outputdataset1",
+						"type": "DatasetReference"
+					},
+					"name": "outputNOTEXIST",
+					"rejectedDataLinkedService": {
+						"referenceName": "linkedservise_arifa",
+						"type": "LinkedServiceReference"
+					}
+				}
+			],
+			"transformations": [
+				{
+					"name": "notexist"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          eid as string,",
+				"          name as string,",
+				"          gender as string,",
+				"          deptid as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> empdat",
+				"source(output(",
+				"          depid as string,",
+				"          deptname as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     partitionBy('hash', 1)) ~> det",
+				"empdat, det exists(deptid == depid,",
+				"     negate:true,",
+				"     partitionBy('hash', 1),",
+				"     broadcast: 'auto')~> notexist",
+				"notexist sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Name as string,",
+				"          Category as string,",
+				"          Status as string,",
+				"          Error as string",
+				"     ),",
+				"     partitionFileNames:['notexist.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> outputNOTEXIST"
+			]
+		}
+	}
+}

@@ -1,0 +1,20 @@
+{
+	"name": "inputdataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "linkedservise_arifa",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "empdata.csv",
+				"folderPath": "input",
+				"container": "arifacontainer"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

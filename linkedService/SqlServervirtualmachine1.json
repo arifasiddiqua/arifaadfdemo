@@ -1,0 +1,17 @@
+{
+	"name": "SqlServervirtualmachine1",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"description": "sqlserver is connected to the laptop",
+		"annotations": [],
+		"type": "SqlServer",
+		"typeProperties": {
+			"connectionString": "integrated security=False;data source=ARIFA;initial catalog=compamy;user id=sa",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJlNzEwZTg0MS1mZjE2LTQ1YzMtYjczMi1lMzYxY2ZhNmVmZWIiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "IRselfhosted-arifa",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

@@ -1,0 +1,9 @@
+{
+	"name": "ADFprep",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "e617f6c5-11f0-444b-944a-cc529f30fc27",
+		"tenantId": "232ff887-7f74-4124-a311-d16fc9dfea0c"
+	}
+}

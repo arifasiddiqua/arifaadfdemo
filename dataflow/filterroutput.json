@@ -1,0 +1,60 @@
+{
+	"name": "filterroutput",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "empdata",
+						"type": "DatasetReference"
+					},
+					"name": "employedata"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "filteroutput",
+						"type": "DatasetReference"
+					},
+					"name": "salesempoutput",
+					"rejectedDataLinkedService": {
+						"referenceName": "linkedservise_arifa",
+						"type": "LinkedServiceReference"
+					}
+				}
+			],
+			"transformations": [
+				{
+					"name": "salesfilteroutput"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          eid as string,",
+				"          name as string,",
+				"          gender as string,",
+				"          deptid as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> employedata",
+				"employedata filter(equals(deptid, '3'),",
+				"     partitionBy('hash', 1)) ~> salesfilteroutput",
+				"salesfilteroutput sink(allowSchemaDrift: true,",
+				"     validateSchema: true,",
+				"     input(",
+				"          Name as string,",
+				"          Category as string,",
+				"          Status as string,",
+				"          Error as string",
+				"     ),",
+				"     partitionFileNames:['sales output after filter'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> salesempoutput"
+			]
+		}
+	}
+}
