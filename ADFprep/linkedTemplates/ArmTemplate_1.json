@@ -1,0 +1,1283 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "ADFprep"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/dataflow3')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "empdata",
+								"type": "DatasetReference"
+							},
+							"name": "EMPDATA"
+						},
+						{
+							"dataset": {
+								"referenceName": "deptdata",
+								"type": "DatasetReference"
+							},
+							"name": "DEPDATA"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "outputdataset1",
+								"type": "DatasetReference"
+							},
+							"name": "UNIONALLEMP",
+							"rejectedDataLinkedService": {
+								"referenceName": "linkedservise_arifa",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "union1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          eid as string,",
+						"          name as string,",
+						"          gender as string,",
+						"          deptid as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> EMPDATA",
+						"source(output(",
+						"          depid as string,",
+						"          deptname as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> DEPDATA",
+						"EMPDATA, DEPDATA union(byName: true,",
+						"     partitionBy('hash', 1))~> union1",
+						"union1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Name as string,",
+						"          Category as string,",
+						"          Status as string,",
+						"          Error as string",
+						"     ),",
+						"     partitionFileNames:['OUTPUTUNION'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> UNIONALLEMP"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/derived')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "empdata",
+								"type": "DatasetReference"
+							},
+							"name": "employee"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "outputdataset1",
+								"type": "DatasetReference"
+							},
+							"name": "derivedcolumn",
+							"rejectedDataLinkedService": {
+								"referenceName": "linkedservise_arifa",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          eid as string,",
+						"          name as string,",
+						"          gender as string,",
+						"          deptid as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> employee",
+						"employee derive(name = upper(name),",
+						"          gender = iif(gender=='male',upper(gender),lower(gender)),",
+						"     partitionBy('hash', 1)) ~> derivedColumn1",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Name as string,",
+						"          Category as string,",
+						"          Status as string,",
+						"          Error as string",
+						"     ),",
+						"     partitionFileNames:['derivedcolumn.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> derivedcolumn"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/filterroutput')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "empdata",
+								"type": "DatasetReference"
+							},
+							"name": "employedata"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "filteroutput",
+								"type": "DatasetReference"
+							},
+							"name": "salesempoutput",
+							"rejectedDataLinkedService": {
+								"referenceName": "linkedservise_arifa",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "salesfilteroutput"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          eid as string,",
+						"          name as string,",
+						"          gender as string,",
+						"          deptid as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> employedata",
+						"employedata filter(equals(deptid, '3'),",
+						"     partitionBy('hash', 1)) ~> salesfilteroutput",
+						"salesfilteroutput sink(allowSchemaDrift: true,",
+						"     validateSchema: true,",
+						"     input(",
+						"          Name as string,",
+						"          Category as string,",
+						"          Status as string,",
+						"          Error as string",
+						"     ),",
+						"     partitionFileNames:['sales output after filter'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> salesempoutput"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/lookuptrfmn')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "empdata",
+								"type": "DatasetReference"
+							},
+							"name": "emp"
+						},
+						{
+							"dataset": {
+								"referenceName": "deptdata",
+								"type": "DatasetReference"
+							},
+							"name": "deptddata"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "outputdataset1",
+								"type": "DatasetReference"
+							},
+							"name": "lookupoutput",
+							"rejectedDataLinkedService": {
+								"referenceName": "linkedservise_arifa",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "lookuptransform"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          eid as string,",
+						"          name as string,",
+						"          gender as string,",
+						"          deptid as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> emp",
+						"source(output(",
+						"          depid as string,",
+						"          deptname as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> deptddata",
+						"emp, deptddata lookup(deptid == depid,",
+						"     multiple: false,",
+						"     pickup: 'any',",
+						"     partitionBy('hash', 1),",
+						"     broadcast: 'auto')~> lookuptransform",
+						"lookuptransform sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Name as string,",
+						"          Category as string,",
+						"          Status as string,",
+						"          Error as string",
+						"     ),",
+						"     partitionFileNames:['outputoflookup'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> lookupoutput"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/newbranch')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "empdata",
+								"type": "DatasetReference"
+							},
+							"name": "empdata"
+						},
+						{
+							"dataset": {
+								"referenceName": "deptdata",
+								"type": "DatasetReference"
+							},
+							"name": "dept"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "outputdataset1",
+								"type": "DatasetReference"
+							},
+							"name": "joinoutput",
+							"rejectedDataLinkedService": {
+								"referenceName": "linkedservise_arifa",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"dataset": {
+								"referenceName": "outputdataset1",
+								"type": "DatasetReference"
+							},
+							"name": "newbranchoutputgroupby",
+							"rejectedDataLinkedService": {
+								"referenceName": "linkedservise_arifa",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "agregatesum"
+						},
+						{
+							"name": "join1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          eid as string,",
+						"          name as string,",
+						"          gender as string,",
+						"          deptid as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> empdata",
+						"source(output(",
+						"          depid as string,",
+						"          deptname as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> dept",
+						"empdata aggregate(groupBy(deptid),",
+						"     totalemlployees = count(eid)) ~> agregatesum",
+						"empdata, dept join(deptid == depid,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     partitionBy('hash', 1),",
+						"     broadcast: 'auto')~> join1",
+						"join1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Name as string,",
+						"          Category as string,",
+						"          Status as string,",
+						"          Error as string",
+						"     ),",
+						"     partitionFileNames:['newbranchoutputjoin.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> joinoutput",
+						"agregatesum sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Name as string,",
+						"          Category as string,",
+						"          Status as string,",
+						"          Error as string",
+						"     ),",
+						"     partitionFileNames:['aggregationoutput.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> newbranchoutputgroupby"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pivot')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "empdata",
+								"type": "DatasetReference"
+							},
+							"name": "empdata"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "outputdataset1",
+								"type": "DatasetReference"
+							},
+							"name": "outputofpivot",
+							"rejectedDataLinkedService": {
+								"referenceName": "linkedservise_arifa",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "pivotofempdata"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          eid as string,",
+						"          name as string,",
+						"          gender as string,",
+						"          deptid as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> empdata",
+						"empdata pivot(groupBy(deptid),",
+						"     pivotBy(gender),",
+						"     {} = count(eid),",
+						"     columnNaming: 'total$N$Vemplloyees',",
+						"     lateral: true,",
+						"     partitionBy('hash', 1)) ~> pivotofempdata",
+						"pivotofempdata sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Name as string,",
+						"          Category as string,",
+						"          Status as string,",
+						"          Error as string",
+						"     ),",
+						"     partitionFileNames:['pivot.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> outputofpivot"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/selectdataflow')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "empdata",
+								"type": "DatasetReference"
+							},
+							"name": "empdata"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "outputdataset1",
+								"type": "DatasetReference"
+							},
+							"name": "sink1",
+							"rejectedDataLinkedService": {
+								"referenceName": "linkedservise_arifa",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "select1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          eid as string,",
+						"          name as string,",
+						"          gender as string,",
+						"          deptid as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> empdata",
+						"empdata select(mapColumn(",
+						"          {employee  name} = name,",
+						"          {employee id} = eid,",
+						"          gender",
+						"     ),",
+						"     partitionBy('hash', 1),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select1",
+						"select1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Name as string,",
+						"          Category as string,",
+						"          Status as string,",
+						"          Error as string",
+						"     ),",
+						"     partitionFileNames:['selectoutput.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/sort')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "empdata",
+								"type": "DatasetReference"
+							},
+							"name": "empdata"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "outputdataset1",
+								"type": "DatasetReference"
+							},
+							"name": "outputofsort",
+							"rejectedDataLinkedService": {
+								"referenceName": "linkedservise_arifa",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "sort1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          eid as string,",
+						"          name as string,",
+						"          gender as string,",
+						"          deptid as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> empdata",
+						"empdata sort(asc(name, true),",
+						"     caseInsensitive: true,",
+						"     partitionBy('hash', 1)) ~> sort1",
+						"sort1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Name as string,",
+						"          Category as string,",
+						"          Status as string,",
+						"          Error as string",
+						"     ),",
+						"     partitionFileNames:['sotoutput.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> outputofsort"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/surrogacy')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "surrogacy",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "outputdataset1",
+								"type": "DatasetReference"
+							},
+							"name": "sink1",
+							"rejectedDataLinkedService": {
+								"referenceName": "linkedservise_arifa",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "surrogateKey1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          NAME as string,",
+						"          AREA as string,",
+						"          GENDER as string,",
+						"          EMPID as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> source1",
+						"source1 keyGenerate(output(serialnumber as long),",
+						"     startAt: 1L,",
+						"     stepValue: 1L,",
+						"     partitionBy('hash', 1)) ~> surrogateKey1",
+						"surrogateKey1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Name as string,",
+						"          Category as string,",
+						"          Status as string,",
+						"          Error as string",
+						"     ),",
+						"     partitionFileNames:['surrogacy.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/union')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "empdata",
+								"type": "DatasetReference"
+							},
+							"name": "empdata"
+						},
+						{
+							"dataset": {
+								"referenceName": "deptdata",
+								"type": "DatasetReference"
+							},
+							"name": "dedata"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "outputdataset1",
+								"type": "DatasetReference"
+							},
+							"name": "sink1",
+							"rejectedDataLinkedService": {
+								"referenceName": "linkedservise_arifa",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "union1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          eid as string,",
+						"          name as string,",
+						"          gender as string,",
+						"          deptid as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> empdata",
+						"source(output(",
+						"          depid as string,",
+						"          deptname as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> dedata",
+						"empdata, dedata union(byName: true,",
+						"     partitionBy('hash', 1))~> union1",
+						"union1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Name as string,",
+						"          Category as string,",
+						"          Status as string,",
+						"          Error as string",
+						"     ),",
+						"     partitionFileNames:['unionoutput.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/unpivot')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "sampleForUnpivot",
+								"type": "DatasetReference"
+							},
+							"name": "sampledata"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "outputdataset1",
+								"type": "DatasetReference"
+							},
+							"name": "unpivot",
+							"rejectedDataLinkedService": {
+								"referenceName": "linkedservise_arifa",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "unpivot1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          po as string,",
+						"          name as string,",
+						"          apple as string,",
+						"          mango as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> sampledata",
+						"sampledata unpivot(output(",
+						"          fruits as string,",
+						"          amount as string",
+						"     ),",
+						"     ungroupBy(po,",
+						"          name),",
+						"     lateral: true,",
+						"     ignoreNullPivots: false,",
+						"     partitionBy('hash', 1)) ~> unpivot1",
+						"unpivot1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Name as string,",
+						"          Category as string,",
+						"          Status as string,",
+						"          Error as string",
+						"     ),",
+						"     partitionFileNames:['unpivot.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> unpivot"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/windowtranformation')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "window",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "outputdataset1",
+								"type": "DatasetReference"
+							},
+							"name": "sink1",
+							"rejectedDataLinkedService": {
+								"referenceName": "linkedservise_arifa",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "window1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          eid as integer,",
+						"          name as string,",
+						"          country as string,",
+						"          salary as integer,",
+						"          department as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> source1",
+						"source1 window(over(department),",
+						"     asc(salary, true),",
+						"     rank = denseRank(),",
+						"     partitionBy('hash', 1)) ~> window1",
+						"window1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Name as string,",
+						"          Category as string,",
+						"          Status as string,",
+						"          Error as string",
+						"     ),",
+						"     partitionFileNames:['windows.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/NOTEXIST')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow1",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "OPNOTEXIST",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"empdat": {},
+									"det": {},
+									"outputNOTEXIST": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-08-02T14:04:11Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/aggregate')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow1",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "aggregete",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"employeedata": {},
+									"department": {},
+									"outputForJoinAndGroupby": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-08-02T05:35:16Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/condsplit')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "condsplit",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "cndsplit",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"empdata": {},
+									"itpeople": {},
+									"HRpeoples": {},
+									"salespeople": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-08-02T07:34:20Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/derivedcimn')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow1",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "derived",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"employee": {},
+									"derivedcolumn": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-08-02T09:27:08Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/derived')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/filter')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "filterr",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "filterroutput",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"employedata": {},
+									"salesempoutput": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Coarse"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-08-01T16:34:18Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/filterroutput')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/join')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow1",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "dataflow1",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"source1": {},
+									"source2": {},
+									"sink1": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-08-01T15:08:44Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/lookuptrfm')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow1",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "lookuptrfmn",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"emp": {},
+									"deptddata": {},
+									"lookupoutput": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-08-02T14:34:31Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/lookuptrfmn')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pipeline1')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow1",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "sort",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"empdata": {},
+									"outputofsort": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-08-02T15:21:28Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/sort')]"
+			]
+		}
+	]
+}
